@@ -1,0 +1,16 @@
+# Local environment credentials
+.env.local
+.env
+.env.*.local
+
+# Dependencies and build output
+node_modules/
+.next/
+dist/
+build/
+
+# Python local runtime
+.venv/
+backend/.deps/
+__pycache__/
+*.py[cod]

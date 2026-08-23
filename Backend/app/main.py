@@ -9,10 +9,17 @@ from . import database
 from .config import settings
 from .risk import assess_water_risk
 from .services import ProviderError, generate_risk_explanation, send_sms
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI(title="JalRakshak API", version="0.1.0")
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class WaterReport(BaseModel):
     village_name: str = Field(min_length=2, max_length=120)

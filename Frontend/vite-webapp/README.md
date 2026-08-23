@@ -9,7 +9,9 @@ npm install
 npm run dev
 ```
 
-Copy `.env.example` to `.env`. Leave `VITE_API_BASE_URL` empty for the demo. To connect the earlier backend, set it to its host (for example `http://127.0.0.1:8000`); the app expects `/api/v1/villages` and `POST /api/sensor/readings`.
+Copy `.env.example` to `.env`. Leave `VITE_API_BASE_URL` empty for a local demo. For an installed APK, set it at build time to the deployed HTTPS backend URL. The web app automatically uses same-origin Vercel API routes after deployment.
+
+See [Vercel deployment handoff](docs/VERCEL_DEPLOYMENT.md) for the server-side environment variables and APK rebuild steps. Never place Fast2SMS or Supabase service-role credentials in a Vite environment file.
 
 ## Sensor integration
 

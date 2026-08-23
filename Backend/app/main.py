@@ -18,6 +18,8 @@ class WaterReport(BaseModel):
     village_name: str = Field(min_length=2, max_length=120)
     turbidity_ntu: float | None = Field(default=None, ge=0)
     ph: float | None = Field(default=None, ge=0, le=14)
+    tds_ppm: float | None = Field(default=None, ge=0)
+    temperature_c: float | None = None
     diarrhea_reports: int = Field(default=0, ge=0)
     rainfall_mm: float = Field(default=0, ge=0)
 

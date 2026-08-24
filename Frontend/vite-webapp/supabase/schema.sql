@@ -1,0 +1,11 @@
+create table public.villages (id text primary key, name text not null, district text not null, created_at timestamptz default now());
+create table public.sensor_devices (id text primary key, village_id text references public.villages(id), status text default 'offline', created_at timestamptz default now());
+create table public.sensor_readings (id bigint generated always as identity primary key, device_id text references public.sensor_devices(id), village_id text references public.villages(id), temperature numeric, ph numeric, tds numeric, turbidity numeric, recorded_at timestamptz not null, created_at timestamptz default now());
+create index sensor_readings_village_recorded_idx on public.sensor_readings(village_id, recorded_at desc);
+create table public.health_scores (id bigint generated always as identity primary key, village_id text references public.villages(id), score int check(score between 0 and 100), risk_level text check(risk_level in ('HIGH','MODERATE','SAFE')), water_status text, explanation text, created_at timestamptz default now());
+create table public.disease_reports (id bigint generated always as identity primary key, village_id text references public.villages(id), symptom text, water_source text, visual_quality text, reported_at timestamptz default now());
+create table public.water_sources (id bigint generated always as identity primary key, village_id text references public.villages(id), source_type text, status text, created_at timestamptz default now());
+create table public.vaccination_records (id bigint generated always as identity primary key, village_id text references public.villages(id), coverage numeric, recorded_at timestamptz default now());
+create table public.alerts (id bigint generated always as identity primary key, village_id text references public.villages(id), channel text, message text, status text default 'queued', created_at timestamptz default now());
+alter table public.villages enable row level security; alter table public.sensor_readings enable row level security; alter table public.health_scores enable row level security;
+-- Add role-specific Supabase policies before enabling authenticated clients. Sensor ingest should use a server/Edge Function, never the anon key.

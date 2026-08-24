@@ -13,13 +13,20 @@ from .risk import assess_water_risk
 from .services import ProviderError, generate_risk_explanation, send_sms, send_sms_many
 
 app = FastAPI(title="JalRakshak API", version="0.1.0")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost", "capacitor://localhost"], allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173", "capacitor://localhost"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class WaterReport(BaseModel):
     village_name: str = Field(min_length=2, max_length=120)
     turbidity_ntu: float | None = Field(default=None, ge=0)
     ph: float | None = Field(default=None, ge=0, le=14)
+    tds_ppm: float | None = Field(default=None, ge=0)
+    temperature_c: float | None = None
     diarrhea_reports: int = Field(default=0, ge=0)
     rainfall_mm: float = Field(default=0, ge=0)
 
@@ -66,11 +73,39 @@ def villages() -> list[dict]:
 
 @app.post("/api/v1/reports/water")
 def create_water_report(report: WaterReport) -> dict:
-    risk = assess_water_risk(report.turbidity_ntu, report.ph, report.diarrhea_reports, report.rainfall_mm)
+    risk = assess_water_risk(
+        report.turbidity_ntu,
+        report.ph,
+        report.diarrhea_reports,
+        report.rainfall_mm
+    )
+
     timestamp = datetime.now(timezone.utc).isoformat()
+
     try:
-        database.insert("health_reports", {"village_name": report.village_name, "module": "water_safety", "payload": report.model_dump(), "reported_at": timestamp})
-        snapshot = database.insert("village_risk_snapshots", {"village_name": report.village_name, "module": "water_safety", "community_health_score": 100 - risk.score, "risk_score": risk.score, "risk_level": risk.level, "drivers": risk.drivers, "updated_at": timestamp})
+        database.insert(
+            "health_reports",
+            {
+                "village_name": report.village_name,
+                "module": "water_safety",
+                "payload": report.model_dump(),
+                "reported_at": timestamp
+            }
+        )
+
+        snapshot = database.insert(
+            "village_risk_snapshots",
+            {
+                "village_name": report.village_name,
+                "module": "water_safety",
+                "community_health_score": 100 - risk.score,
+                "risk_score": risk.score,
+                "risk_level": risk.level,
+                "drivers": risk.drivers,
+                "updated_at": timestamp
+            }
+        )
+
         alert = None
         sms_delivery = None
         if risk.level in {"high", "emergency"}:
@@ -90,10 +125,27 @@ def create_water_report(report: WaterReport) -> dict:
 
 @app.post("/api/v1/risk-explanations")
 def risk_explanation(report: WaterReport) -> dict:
-    risk = assess_water_risk(report.turbidity_ntu, report.ph, report.diarrhea_reports, report.rainfall_mm)
+    risk = assess_water_risk(
+        report.turbidity_ntu,
+        report.ph,
+        report.diarrhea_reports,
+        report.rainfall_mm
+    )
+
     try:
-        text = generate_risk_explanation(report.village_name, risk.score, risk.level, risk.drivers)
-        return {"risk": risk.__dict__, "explanation": text, "disclaimer": "This is an early-warning aid, not a clinical diagnosis."}
+        text = generate_risk_explanation(
+            report.village_name,
+            risk.score,
+            risk.level,
+            risk.drivers
+        )
+
+        return {
+            "risk": risk.__dict__,
+            "explanation": text,
+            "disclaimer": "This is an early-warning aid, not a clinical diagnosis."
+        }
+
     except ProviderError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
 
@@ -101,10 +153,19 @@ def risk_explanation(report: WaterReport) -> dict:
 @app.post("/api/v1/alerts/sms")
 def sms_alert(alert: SMSAlert) -> dict:
     if not alert.recipient_has_consented:
-        raise HTTPException(status_code=400, detail="Recipient consent is required before sending an SMS.")
+        raise HTTPException(
+            status_code=400,
+            detail="Recipient consent is required before sending an SMS."
+        )
+
     try:
         response = send_sms(alert.phone, alert.message)
-        return {"provider": "fast2sms", "response": response}
+
+        return {
+            "provider": "fast2sms",
+            "response": response
+        }
+
     except ProviderError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
 

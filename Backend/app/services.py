@@ -43,12 +43,17 @@ def generate_risk_explanation(village_name: str, score: int, level: str, drivers
     raise ProviderError("OpenAI returned no text explanation.")
 
 
-def send_sms(phone: str, message: str) -> dict:
-    """Sends only after the API caller explicitly confirms recipient consent."""
-    digits = re.sub(r"\D", "", phone)[-10:]
-    if len(digits) != 10:
-        raise ProviderError("Use a valid 10-digit Indian mobile number.")
-    endpoint = "https://www.fast2sms.com/dev/bulkV2?" + urlencode({"route": "q", "message": message, "numbers": digits})
+def send_sms_many(phones: list[str], message: str) -> dict:
+    """Send one approved message to consented Indian mobile numbers."""
+    numbers = []
+    for phone in phones:
+        digits = re.sub(r"\D", "", phone)[-10:]
+        if len(digits) != 10:
+            raise ProviderError("Use valid 10-digit Indian mobile numbers.")
+        numbers.append(digits)
+    if not numbers:
+        raise ProviderError("No consented mobile numbers are registered for this village.")
+    endpoint = "https://www.fast2sms.com/dev/bulkV2?" + urlencode({"route": "q", "message": message, "numbers": ",".join(numbers)})
     request = Request(endpoint, headers={"authorization": settings.fast2sms_api_key, "accept": "application/json"})
     try:
         with urlopen(request, timeout=30) as response:
@@ -57,3 +62,8 @@ def send_sms(phone: str, message: str) -> dict:
         raise ProviderError(f"Fast2SMS returned {error.code}: {error.read().decode('utf-8', errors='replace')}") from error
     except URLError as error:
         raise ProviderError(f"Could not reach Fast2SMS: {error.reason}") from error
+
+
+def send_sms(phone: str, message: str) -> dict:
+    """Backward-compatible single-recipient helper."""
+    return send_sms_many([phone], message)

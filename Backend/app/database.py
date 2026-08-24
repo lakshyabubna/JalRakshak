@@ -50,5 +50,20 @@ def list_villages() -> list[dict[str, Any]]:
     return _request("GET", f"village_risk_snapshots?{query}")
 
 
+def list_consented_phones(village_name: str) -> list[str]:
+    query = urlencode({"select": "phone", "village_name": f"eq.{village_name}", "sms_consent": "is.true", "is_active": "is.true"})
+    rows = _request("GET", f"registered_residents?{query}")
+    return [str(row["phone"]) for row in rows]
+
+
+def list_registered_residents(village_name: str) -> list[dict[str, Any]]:
+    query = urlencode({"select": "id,full_name,phone,village_name", "village_name": f"eq.{village_name}", "sms_consent": "is.true", "is_active": "is.true", "order": "created_at.desc"})
+    return _request("GET", f"registered_residents?{query}")
+
+
+def delete_registered_resident(registration_id: str) -> None:
+    _request("DELETE", f"registered_residents?id=eq.{registration_id}")
+
+
 def connection_check() -> None:
     _request("GET", "village_risk_snapshots?select=id&limit=1")

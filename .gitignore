@@ -15,3 +15,6 @@ build/
 backend/.deps/
 __pycache__/
 *.py[cod]
+
+# Local Fast2SMS demo-recipient store
+Backend/.local-registrations.json
